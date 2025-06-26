@@ -1,0 +1,28 @@
+name: nfc_phone_pay
+description: NFC Tap-to-Pay with external payment links and hacker style
+publish_to: "none"
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_nfc_kit: ^3.4.0
+  sqflite: ^2.3.0
+  path: ^1.8.0
+  path_provider: ^2.0.11
+  url_launcher: ^6.2.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/FiraMono-Regular.ttf
+  fonts:
+    - family: FiraMono
+      fonts:
+        - asset: assets/fonts/FiraMono-Regular.ttf
