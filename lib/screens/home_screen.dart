@@ -4,6 +4,8 @@ import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:credit_card_validator/credit_card_validator.dart';
 import 'package:nfc_phone_pay/services/card_dv_services.dart';
+import 'card_share_screen.dart'; // make sure this file exists!
+import 'card_recieve_screen.dart'; // <-- Add this import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,8 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadCards() async {
     final data = await CardDbService().getCards();
-    // Debug print for troubleshooting
-    print("Loaded cards: $data");
     setState(() => cards = data);
   }
 
@@ -64,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool validateCardInput(BuildContext context, String cardNumber, String expiry, String cvv) {
-    // Card number validation (Luhn check)
     final ccNumResult = validator.validateCCNum(cardNumber.trim());
     if (!ccNumResult.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,8 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return false;
     }
-
-    // Expiry validation: MM/YY, not in the past
     final regExp = RegExp(r'^(0[1-9]|1[0-2])\/([0-9]{2})$');
     if (!regExp.hasMatch(expiry)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,15 +88,12 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return false;
     }
-
-    // CVV validation: 3 or 4 digits
     if (cvv.isEmpty || (cvv.length != 3 && cvv.length != 4)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('CVV must be 3 or 4 digits!')),
       );
       return false;
     }
-
     return true;
   }
 
@@ -223,7 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         nameController.text,
                         cardNumber,
                         expiry,
-                        // Only save CVV temporarily for the session, do not store long-term!
                         nfcId: nfcId,
                         paymentLink: paymentLinkController.text.isNotEmpty ? paymentLinkController.text : null,
                         balance: double.tryParse(balanceController.text) ?? 0,
@@ -373,7 +366,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         name: nameController.text,
                         cardNumber: cardNumber,
                         expiry: expiry,
-                        // Only use cvv for this session
                         nfcId: nfcId,
                         paymentLink: paymentLinkController.text.isNotEmpty ? paymentLinkController.text : null,
                         balance: double.tryParse(balanceController.text) ?? 0,
@@ -626,6 +618,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _shareCard(Map<String, dynamic> card) async {
+    final cardData = {
+      'name': card['name'] ?? '',
+      'masked_card_number': card['masked_card_number'] ?? '',
+      'expiry': card['expiry'] ?? '',
+      'nfcId': card['nfcId'] ?? '',
+      'paymentLink': card['paymentLink'] ?? '',
+      'balance': card['balance'] ?? 0,
+    };
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CardShareScreen(cardData: cardData.toString()),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -683,23 +692,33 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                             ],
                           ),
-                          trailing: Row(
+                          trailing: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.lightBlueAccent),
-                                tooltip: 'Edit Card',
-                                onPressed: () => _editCard(card),
+                                icon: const Icon(Icons.share, color: Colors.lightBlueAccent),
+                                tooltip: 'Share Card',
+                                onPressed: () => _shareCard(card),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.link, color: Colors.greenAccent),
-                                tooltip: 'Show Payment Link',
-                                onPressed: () => _showPaymentLink(card['name'], card['paymentLink']),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.redAccent),
-                                tooltip: 'Delete',
-                                onPressed: () => _removeCard(card['id'] as int),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.lightBlueAccent),
+                                    tooltip: 'Edit Card',
+                                    onPressed: () => _editCard(card),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.link, color: Colors.greenAccent),
+                                    tooltip: 'Show Payment Link',
+                                    onPressed: () => _showPaymentLink(card['name'], card['paymentLink']),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                    tooltip: 'Delete',
+                                    onPressed: () => _removeCard(card['id'] as int),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -721,10 +740,32 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addCard,
-        child: const Icon(Icons.add),
-        tooltip: 'Add Card',
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: "add_card",
+            onPressed: _addCard,
+            icon: const Icon(Icons.add),
+            label: const Text("Add Card"),
+            backgroundColor: Colors.greenAccent,
+            foregroundColor: Colors.black,
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: "receive_card",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CardReceiveScreen()),
+              );
+            },
+            icon: const Icon(Icons.download),
+            label: const Text("Receive Card"),
+            backgroundColor: Colors.blueAccent,
+            foregroundColor: Colors.white,
+          ),
+        ],
       ),
     );
   }
